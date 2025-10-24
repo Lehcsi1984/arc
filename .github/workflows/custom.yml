@@ -24,7 +24,6 @@ jobs:
           git config --global user.email "info@auxxxilium.tech"
           git config --global user.name "AuxXxilium"
           sudo timedatectl set-timezone "Europe/Berlin"
-
       - name: Check Custom
         shell: python
         run: |
@@ -32,10 +31,8 @@ jobs:
           import json, subprocess
           def set_output(name, value):
             subprocess.call(["echo '{}={}' >> $GITHUB_ENV".format(name, value)], shell=True)
-
           issuetitle = ${{ toJSON(github.event.issue.title) }};
           issuebody = ${{ toJSON(github.event.issue.body) }};
-
           MODEL = ''
           PRODUCTVER = ''
           ADDONS = ''
@@ -50,22 +47,18 @@ jobs:
               FORMAT = jsonbody.get('format', '')
           except ValueError as e:
               pass
-
           set_output("MODEL", MODEL)
           set_output("PRODUCTVER", PRODUCTVER)
           set_output("ADDONS", ADDONS)
           set_output("KERNEL", KERNEL)
           set_output("FORMAT", FORMAT)
-
       # calculates the version number and push
       - name: Calculate Version
         run: |
           # Calculate Version
           VERSION="`date +'%y.%-m.%-d'`-custom"
-
           echo "Version: ${VERSION}"
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
-
       - name: Update Comment Building
         id: comment
         uses: actions-cool/issues-helper@v3
@@ -78,7 +71,6 @@ jobs:
             building arc-${{ env.MODEL }}-${{ env.VERSION }}, it will be uploaded to..  
             > ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}  
             ----
-
       # Install dependencies
       - name: Install Dependencies
         run: |
@@ -86,33 +78,27 @@ jobs:
           sudo apt install -y jq gawk cpio gettext libelf-dev qemu-utils busybox dialog curl sed
           sudo pip install -r scripts/requirements.txt
           sudo snap install yq
-
       # Build incremental
       - name: Build image
         run: |
           . scripts/functions.sh
-
           function writeConfigKey() {
             [ "${2}" = "{}" ] && sudo yq eval '.'${1}' = {}' --inplace "${3}" 2>/dev/null || sudo yq eval '.'${1}' = "'"${2}"'"' --inplace "${3}" 2>/dev/null
           }
-
           TAG="$(curl -m 5 -kL https://api.github.com/repos/AuxXxilium/arc/releases/latest | grep "tag_name" | awk '{print substr($2, 2, length($2)-3)}')"
           curl -kL "https://github.com/AuxXxilium/arc/releases/download/${TAG}/arc-${TAG}.img.zip" -o "/tmp/arc.img.zip"
           unzip -o "/tmp/arc.img.zip" -d "/tmp"
-
           echo "Modify Arc Image"
           IMAGE_FILE="/tmp/arc.img"
           fdisk -l "${IMAGE_FILE}"
           
           LOOPX=$(sudo losetup -f)
           sudo losetup -P "${LOOPX}" "${IMAGE_FILE}"
-
           echo "Mounting image file"
           mkdir -p "/tmp/p1"
           mkdir -p "/tmp/p3"
           sudo mount ${LOOPX}p1 "/tmp/p1"
           sudo mount ${LOOPX}p3 "/tmp/p3"
-
           echo "Set Custom Config"
           PRESET_CONFIG_FILE="/tmp/p1/user-config.yml"
           sudo touch "${PRESET_CONFIG_FILE}"
@@ -146,17 +132,13 @@ jobs:
           sudo mv -f "/tmp/${DSM_FILE}" "/tmp/p3/users/${DSM_FILE}"
           echo "Syncing files"
           sync
-
           echo "Unmount image file"
           sudo umount "/tmp/p1"
           sudo umount "/tmp/p3"
           rmdir "/tmp/p1"
           rmdir "/tmp/p3"
-
           sudo losetup --detach ${LOOPX}
-
           cp -f "${IMAGE_FILE}" "arc.img"
-
       # Zip image and generate checksum
       - name: Convert & Pack
         run: |
@@ -180,7 +162,6 @@ jobs:
             convertova "arc.img" "arc.ova"
             zip -9 "arc-${{ env.MODEL }}-${{ env.VERSION }}.ova.zip" arc.ova
           fi
-
       # Upload artifact
       - name: Upload to Artifacts
         uses: actions/upload-artifact@v4
@@ -202,10 +183,8 @@ jobs:
             Hi @${{ github.event.issue.user.login }}.  
             arc-${{ env.MODEL }}-${{ env.VERSION }} is ready to download at:
             > ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
             If this isn't working, do not use customized Versions!
             ----
-
       - name: Update Comment Fail
         if: failure()
         uses: actions-cool/issues-helper@v3
@@ -218,7 +197,6 @@ jobs:
             Hi @${{ github.event.issue.user.login }}.  
             arc-${{ env.MODEL }}-${{ env.PRODUCTVER }}-${{ env.VERSION }} failed to build and package, please try again later.  
             ----
-
       - name: Close Issues
         if: success()
         uses: actions-cool/issues-helper@v3
@@ -236,7 +214,6 @@ jobs:
           git config --global user.email "info@auxxxilium.tech"
           git config --global user.name "AuxXxilium"
           sudo timedatectl set-timezone "Europe/Berlin"
-
       - name: Check Issues
         run: |
           if echo "${{ github.event.issue.body }}" | grep -q "Screenshots"; then 
@@ -244,7 +221,6 @@ jobs:
           else
             echo "FALG=false" >> $GITHUB_ENV
           fi
-
       - name: Create Issues comment
         if: env.FALG == 'false'
         uses: actions-cool/issues-helper@v3
@@ -261,7 +237,6 @@ jobs:
             
             **Hardware**
             Add your Hardware Informations here. CPU / Board / Networkcontroller / Storagecontroller / ...
-
       - name: Close Issues
         if: env.FALG == 'false'
         uses: actions-cool/issues-helper@v3
